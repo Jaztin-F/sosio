@@ -8,88 +8,66 @@ function Dashboard() {
 
   useEffect(() => {
     document.title = "Dashboard - Sosio";
-    
-    // Get user from localStorage
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  // Temporarily disable API call
-  const dashboardData = {
-    totalBalance: 12450.00,
-    activeLoans: 3,
-    investments: 5200.00,
-    recentTransactions: [
-      { id: 1, type: "Loan Payment", amount: -500.00, date: "2024-01-15", description: "Monthly loan payment" },
-      { id: 2, type: "Investment Return", amount: 150.00, date: "2024-01-14", description: "Stock dividend" },
-      { id: 3, type: "Salary Deposit", amount: 3000.00, date: "2024-01-10", description: "Monthly salary" }
-    ]
-  };
-  const loading = false;
-  const error = null;
+  const userId = user?.id;
+  const { data: dashboardData, loading, error, refetch } = useApi(
+    userId ? `http://localhost:5000/api/dashboard/${userId}` : null
+  );
 
   useEffect(() => {
-    if (error) {
-      showError("Failed to load dashboard data");
-    }
+    if (error) showError?.("Failed to load dashboard data");
   }, [error, showError]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-white text-xl">Loading dashboard...</div>
-      </div>
-    );
-  }
+  if (!user) return <div className="flex items-center justify-center min-h-64"><div className="text-white text-xl">Please sign in...</div></div>;
+  if (loading) return <div className="flex items-center justify-center min-h-64"><div className="text-white text-xl">Loading dashboard...</div></div>;
+
+  const d = dashboardData ?? { totalBalance:0, activeLoans:0, investments:0, recentTransactions:[] };
 
   return (
     <div>
-      <h1 className="text-white text-4xl mb-6">Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-white text-4xl">Dashboard</h1>
+        <button className="btn" onClick={() => refetch && refetch()}>Refresh</button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
           <h3 className="text-white text-xl font-semibold mb-2">Total Balance</h3>
-          <p className="text-3xl font-bold text-green-400">
-            ${dashboardData?.totalBalance?.toLocaleString() || '0.00'}
-          </p>
+          <p className="text-3xl font-bold text-green-400">${Number(d.totalBalance || 0).toLocaleString()}</p>
         </div>
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
           <h3 className="text-white text-xl font-semibold mb-2">Active Loans</h3>
-          <p className="text-3xl font-bold text-blue-400">
-            {dashboardData?.activeLoans || 0}
-          </p>
+          <p className="text-3xl font-bold text-blue-400">{d.activeLoans || 0}</p>
         </div>
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
           <h3 className="text-white text-xl font-semibold mb-2">Investments</h3>
-          <p className="text-3xl font-bold text-purple-400">
-            ${dashboardData?.investments?.toLocaleString() || '0.00'}
-          </p>
+          <p className="text-3xl font-bold text-purple-400">${Number(d.investments || 0).toLocaleString()}</p>
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      {dashboardData?.recentTransactions && (
+      {d.recentTransactions && (
         <div className="mt-8">
           <h2 className="text-white text-2xl font-semibold mb-4">Recent Transactions</h2>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
             <div className="space-y-3">
-              {dashboardData.recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex justify-between items-center p-3 bg-white/5 rounded">
+              {d.recentTransactions.map(tx => (
+                <div key={tx.id} className="flex justify-between items-center p-3 bg-white/5 rounded">
                   <div>
-                    <span className="text-white font-medium">{transaction.type}</span>
-                    <p className="text-sm text-gray-300">{transaction.description}</p>
+                    <span className="text-white font-medium">{tx.type}</span>
+                    <p className="text-sm text-gray-300">{tx.description}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-lg font-semibold ${
-                      transaction.amount > 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {transaction.amount > 0 ? '+' : ''}${transaction.amount.toLocaleString()}
+                    <span className={`text-lg font-semibold ${tx.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {tx.amount > 0 ? '+' : ''}${Number(tx.amount).toLocaleString()}
                     </span>
-                    <p className="text-sm text-gray-400">{transaction.date}</p>
+                    <p className="text-sm text-gray-400">{tx.date}</p>
                   </div>
                 </div>
               ))}
+              {d.recentTransactions.length === 0 && <div className="text-gray-400">No recent transactions</div>}
             </div>
           </div>
         </div>
